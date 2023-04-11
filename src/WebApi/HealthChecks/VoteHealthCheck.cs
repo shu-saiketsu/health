@@ -1,40 +1,39 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Net.Http;
-using System.Net;
+﻿using System.Net;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Saiketsu.Health.WebApi.HealthChecks
+namespace Saiketsu.Health.WebApi.HealthChecks;
+
+public sealed class VoteHealthCheck : IHealthCheck
 {
-    public sealed class VoteHealthCheck : IHealthCheck
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public VoteHealthCheck(IHttpClientFactory httpClientFactory)
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        _httpClientFactory = httpClientFactory;
+    }
 
-        public VoteHealthCheck(IHttpClientFactory httpClientFactory)
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
+        CancellationToken cancellationToken = new())
+    {
+        var client = _httpClientFactory.CreateClient("VoteClient");
+
+        try
         {
-            _httpClientFactory = httpClientFactory;
+            var response = await client.GetAsync(string.Empty, cancellationToken);
+
+            if (response.StatusCode != HttpStatusCode.OK) return HealthCheckResult.Unhealthy();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            return content switch
+            {
+                "Healthy" => HealthCheckResult.Healthy(),
+                "Degraded" => HealthCheckResult.Degraded(),
+                _ => HealthCheckResult.Unhealthy()
+            };
         }
-
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new CancellationToken())
+        catch (Exception)
         {
-            var client = _httpClientFactory.CreateClient("VoteClient");
-
-            try
-            {
-                var response = await client.GetAsync(string.Empty, cancellationToken);
-
-                if (response.StatusCode != HttpStatusCode.OK) return HealthCheckResult.Unhealthy();
-
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                return content switch
-                {
-                    "Healthy" => HealthCheckResult.Healthy(),
-                    "Degraded" => HealthCheckResult.Degraded(),
-                    _ => HealthCheckResult.Unhealthy()
-                };
-            }
-            catch (Exception)
-            {
-                return HealthCheckResult.Unhealthy();
-            }
+            return HealthCheckResult.Unhealthy();
         }
     }
 }

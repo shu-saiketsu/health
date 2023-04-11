@@ -1,7 +1,7 @@
-using Saiketsu.Health.WebApi.HealthChecks;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Saiketsu.Health.WebApi.HealthChecks;
 using Serilog;
 using Serilog.Events;
 
@@ -78,11 +78,10 @@ try
                 jsonWriter.WriteStartObject("results");
 
                 foreach (var healthReportEntry in report.Entries)
-                {
                     jsonWriter.WriteString(healthReportEntry.Key,
                         healthReportEntry.Value.Status.ToString());
-                }
 
+                jsonWriter.WriteEndObject();
                 jsonWriter.WriteEndObject();
             }
 
@@ -101,5 +100,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-

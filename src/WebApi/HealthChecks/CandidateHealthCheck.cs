@@ -1,39 +1,39 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Saiketsu.Health.WebApi.HealthChecks
+namespace Saiketsu.Health.WebApi.HealthChecks;
+
+public sealed class CandidateHealthCheck : IHealthCheck
 {
-    public sealed class CandidateHealthCheck : IHealthCheck
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public CandidateHealthCheck(IHttpClientFactory httpClientFactory)
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        _httpClientFactory = httpClientFactory;
+    }
 
-        public CandidateHealthCheck(IHttpClientFactory httpClientFactory)
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
+        CancellationToken cancellationToken = new())
+    {
+        var client = _httpClientFactory.CreateClient("CandidateClient");
+
+        try
         {
-            _httpClientFactory = httpClientFactory;
+            var response = await client.GetAsync(string.Empty, cancellationToken);
+
+            if (response.StatusCode != HttpStatusCode.OK) return HealthCheckResult.Unhealthy();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            return content switch
+            {
+                "Healthy" => HealthCheckResult.Healthy(),
+                "Degraded" => HealthCheckResult.Degraded(),
+                _ => HealthCheckResult.Unhealthy()
+            };
         }
-
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
+        catch (Exception)
         {
-            var client = _httpClientFactory.CreateClient("CandidateClient");
-
-            try
-            {
-                var response = await client.GetAsync(string.Empty, cancellationToken);
-
-                if (response.StatusCode != HttpStatusCode.OK) return HealthCheckResult.Unhealthy();
-
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                return content switch
-                {
-                    "Healthy" => HealthCheckResult.Healthy(),
-                    "Degraded" => HealthCheckResult.Degraded(),
-                    _ => HealthCheckResult.Unhealthy()
-                };
-            }
-            catch (Exception)
-            {
-                return HealthCheckResult.Unhealthy();
-            }
+            return HealthCheckResult.Unhealthy();
         }
     }
 }
